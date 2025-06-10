@@ -1,0 +1,10 @@
+services:
+  - type: cron
+    name: algoknight-worker
+    env: node
+    schedule: "*/20 * * * *"  # Every 20 minutes
+    buildCommand: npm install
+    startCommand: node worker.js
+    envVars:
+      - key: DB_URL
+        sync: false

@@ -379,7 +379,7 @@ const updateData = async (user) => {
 
 // Main scheduled function
 const updateAllUsers = async () => {
-    console.log("Starting DataSync time : ", (new Date).toLocaleTimeString());
+    console.log("Starting DataSync time : ", (new Date).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }));
 
     try {
         const users = await User.find();
@@ -388,7 +388,7 @@ const updateAllUsers = async () => {
             await updateData(user);
         }
 
-        console.log("All users updated. time : ", (new Date).toLocaleTimeString());
+        console.log("All users updated. time : ", (new Date).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }));
     } catch (err) {
         console.error("Scheduler encountered an error:", err);
     }

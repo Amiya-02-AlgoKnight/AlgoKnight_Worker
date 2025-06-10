@@ -1,0 +1,27 @@
+name: Run Background Script Every 15 Minutes
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # Runs every 15 minutes (UTC)
+  workflow_dispatch:        # Optional: allows manual trigger from GitHub UI
+
+jobs:
+  run-worker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Worker Script
+        run: node worker.js
+        env:
+          DB_URL: ${{ secrets.DB_URL }}

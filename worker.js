@@ -6,7 +6,6 @@ import updateRating from "./helpers/updateRating.js";
 import { Problem } from "./models/Problem.js";
 
 import { dbConnect } from './config/database.js';
-dbConnect();
 
 const syncSubs = async (userId, profileId) => {
     try {
@@ -395,8 +394,21 @@ const updateAllUsers = async () => {
     }
 };
 
-// Run every 5 minutes
-// setInterval(updateAllUsers, 5 * 60 * 1000);
 
-// Run once immediately on start
-updateAllUsers();
+import mongoose from "mongoose";
+
+async function fun() {
+    try {
+        await dbConnect();
+        await updateAllUsers();
+    } catch (error) {
+        console.log("Auto Update failed : ", error);
+    }
+    finally {
+        await mongoose.disconnect();
+        console.log("Disconnected db and exiting ✅");
+        process.exit(0);  // force exit if needed
+    }
+}
+
+fun();

@@ -3,8 +3,8 @@ import {config} from 'dotenv';
 config();
 
 
-export const dbConnect = () => {
-    mongoose.connect(process.env.DB_URL)
+export const dbConnect = async () => {
+    await mongoose.connect(process.env.DB_URL)
     .then(() => {
         console.log("DB connected successfully.✅");
         console.log("Hello from database.");

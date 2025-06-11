@@ -75,12 +75,18 @@ const syncSubs = async (userId, profileId) => {
                 subs = subs.submission;
                 console.log(`✅ API fetch success : /lc/subs/${lc.handle}, submissions count : ${subs.length} `)
 
+                const knownProblems = await Problem.find({ platform: "leetcode" });
+                const problemMap = new Map();
+                for (const p of knownProblems) {
+                    problemMap.set(p.url, p); // name = titleSlug
+                }
+
                 for (const sub of subs) {
                     const url = `https://leetcode.com/problems/${sub.titleSlug}/description/`
                     const name = sub.titleSlug;
                     const platform = "leetcode";
 
-                    let prb = await Problem.findOne({ name, platform: "leetcode" });
+                    let prb = problemMap.get(url);
 
                     let tags = prb?.tags;
                     let difficulty = prb?.difficulty;
@@ -97,7 +103,7 @@ const syncSubs = async (userId, profileId) => {
                         tags = topicTags.map((topic) => topic.name)
                     }
 
-                    const stale = await updateStatus({ url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.timestamp * 1000);
+                    const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.timestamp * 1000);
                     if (stale) break;
                 }
             } else {
@@ -122,6 +128,12 @@ const syncSubs = async (userId, profileId) => {
 
                 subs.reverse();//since heatmap has limit-cap (so sending the recent ones last (older ones fall out)) 
 
+                const knownProblems = await Problem.find({ platform: "codeforces" });
+                const problemMap = new Map();
+                for (const p of knownProblems) {
+                    problemMap.set(p.url, p); // name = titleSlug
+                }
+
                 for (const sub of subs) {
                     const url = `https://codeforces.com/problemset/problem/${sub.problem.contestId}/${sub.problem.index}`
                     const { name, tags } = sub.problem;
@@ -129,7 +141,10 @@ const syncSubs = async (userId, profileId) => {
                     const difficulty = sub.problem.rating;
                     const status = sub.verdict === "OK" ? "AC" : sub.verdict;
 
-                    const stale = await updateStatus({ url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.creationTimeSeconds * 1000);
+                    let prb = problemMap.get(url);
+
+
+                    const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.creationTimeSeconds * 1000);
                     if (stale) break;
                 }
             }

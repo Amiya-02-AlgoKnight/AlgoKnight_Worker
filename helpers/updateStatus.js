@@ -1,7 +1,7 @@
 import createProblem from "./createProblem.js";
 
 
-const fun = async (prob_details, status, coder, profile, lastUpdated, subTime) => {
+const fun = async (prob_exists, prob_details, status, coder, profile, lastUpdated, subTime) => {
 
     const { url, name, platform, difficulty, tags } = prob_details;
 
@@ -12,7 +12,9 @@ const fun = async (prob_details, status, coder, profile, lastUpdated, subTime) =
     const day = String(cell.getUTCDate());
     const subDate = `${year}-${month}-${day}`;
 
-    const prb = await createProblem(prob_details);
+    let prb = prob_exists;
+    
+    if(!prb) prb = await createProblem(prob_details);
 
     if (!prb) {
         console.log("Problem or user data is corrupted");

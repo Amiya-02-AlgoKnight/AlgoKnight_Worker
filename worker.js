@@ -94,11 +94,11 @@ const syncSubs = async (userId, profileId) => {
 
                     //get problem details
                     if (!prb) {
-                        prb = await fetch(`https://leetcode-api-osgb.onrender.com/select?titleSlug=${name}`);
-                        prb = await prb.json();
+                        let new_prob = await fetch(`https://leetcode-api-osgb.onrender.com/select?titleSlug=${name}`);
+                        new_prob = await new_prob.json();
 
-                        const { topicTags } = prb;
-                        difficulty = prb.difficulty;
+                        const { topicTags } = new_prob;
+                        difficulty = new_prob.difficulty;
 
                         tags = topicTags.map((topic) => topic.name)
                     }

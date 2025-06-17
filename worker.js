@@ -20,96 +20,100 @@ const syncSubs = async (userId, profileId) => {
 
         //leetcode -> 3 / 4 API calls
         if (lc.handle) {
-            //get solved count
-            let solved = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/solved`);
-            solved = await solved.json();
+            try {
+                //get solved count
+                let solved = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/solved`);
+                solved = await solved.json();
 
-            if (solved?.solvedProblem) {
-                lc.solved = solved.solvedProblem;
-                profile.markModified(`leetcode.solved`);
+                if (solved?.solvedProblem) {
+                    lc.solved = solved.solvedProblem;
+                    profile.markModified(`leetcode.solved`);
 
-                await profile.save();
+                    await profile.save();
 
-                console.log(`✅ API fetch success : /lc/solved/${lc.handle}`)
-            }
-            else {
-                console.log(`❌ API fetch failed : /lc/solved/${lc.handle}`)
-            }
-
-            //get categories
-            let tags = await fetch(`https://leetcode-api-osgb.onrender.com/skillStats/${lc.handle}`);
-            tags = await tags.json();
-
-            if (tags?.data) {
-                tags = tags.data.matchedUser.tagProblemCounts;
-
-                tags = [...new Set(Object.values(tags).flat())];
-
-                let total = 0;
-                const categories = tags.map(x => {
-                    total += x.problemsSolved;
-                    return {
-                        tag: x.tagName,
-                        count: x.problemsSolved
-                    }
-                })
-
-                console.log(`✅ API fetch success : /lc/tags/${lc.handle}, tags count : ${categories.length} `)
-
-                lc.categories = categories;
-                lc.total = total;
-
-                profile.markModified(`leetcode.categories`);
-                profile.markModified(`leetcode.total`);
-
-                await profile.save();
-
-            } else {
-                console.log(`❌ API fetch failed : /lc/tags/${lc.handle}`)
-            }
-
-            //get submissions
-            let subs = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/submission`);
-            subs = await subs.json();
-            if (subs?.submission) {
-                subs = subs.submission;
-                console.log(`✅ API fetch success : /lc/subs/${lc.handle}, submissions count : ${subs.length} `)
-
-                const knownProblems = await Problem.find({ platform: "leetcode" });
-                const problemMap = new Map();
-                for (const p of knownProblems) {
-                    problemMap.set(p.url, p); // name = titleSlug
+                    console.log(`✅ API fetch success : /lc/solved/${lc.handle}`)
+                }
+                else {
+                    console.log(`❌ API fetch failed : /lc/solved/${lc.handle}`)
                 }
 
-                for (const sub of subs) {
-                    const url = `https://leetcode.com/problems/${sub.titleSlug}/description/`
-                    const name = sub.titleSlug;
-                    const platform = "leetcode";
+                //get categories
+                let tags = await fetch(`https://leetcode-api-osgb.onrender.com/skillStats/${lc.handle}`);
+                tags = await tags.json();
 
-                    let prb = problemMap.get(url);
+                if (tags?.data) {
+                    tags = tags.data.matchedUser.tagProblemCounts;
 
-                    let tags = prb?.tags;
-                    let difficulty = prb?.difficulty;
-                    const status = sub.statusDisplay === "Accepted" ? "AC" : sub.statusDisplay;
+                    tags = [...new Set(Object.values(tags).flat())];
 
-                    //get problem details
-                    if (!prb) {
-                        let new_prob = await fetch(`https://leetcode-api-osgb.onrender.com/select?titleSlug=${name}`);
-                        new_prob = await new_prob.json();
+                    let total = 0;
+                    const categories = tags.map(x => {
+                        total += x.problemsSolved;
+                        return {
+                            tag: x.tagName,
+                            count: x.problemsSolved
+                        }
+                    })
 
-                        const { topicTags } = new_prob;
-                        difficulty = new_prob.difficulty;
+                    console.log(`✅ API fetch success : /lc/tags/${lc.handle}, tags count : ${categories.length} `)
 
-                        tags = topicTags.map((topic) => topic.name)
+                    lc.categories = categories;
+                    lc.total = total;
+
+                    profile.markModified(`leetcode.categories`);
+                    profile.markModified(`leetcode.total`);
+
+                    await profile.save();
+
+                } else {
+                    console.log(`❌ API fetch failed : /lc/tags/${lc.handle}`)
+                }
+
+                //get submissions
+                let subs = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/submission`);
+                subs = await subs.json();
+                if (subs?.submission) {
+                    subs = subs.submission;
+                    console.log(`✅ API fetch success : /lc/subs/${lc.handle}, submissions count : ${subs.length} `)
+
+                    const knownProblems = await Problem.find({ platform: "leetcode" });
+                    const problemMap = new Map();
+                    for (const p of knownProblems) {
+                        problemMap.set(p.url, p); // name = titleSlug
                     }
 
-                    const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.timestamp * 1000);
-                    if (stale) break;
-                }
-            } else {
-                console.log(`❌ API fetch failed : /lc/subs/${lc.handle}`)
-            }
+                    for (const sub of subs) {
+                        const url = `https://leetcode.com/problems/${sub.titleSlug}/description/`
+                        const name = sub.titleSlug;
+                        const platform = "leetcode";
 
+                        let prb = problemMap.get(url);
+
+                        let tags = prb?.tags;
+                        let difficulty = prb?.difficulty;
+                        const status = sub.statusDisplay === "Accepted" ? "AC" : sub.statusDisplay;
+
+                        //get problem details
+                        if (!prb) {
+                            let new_prob = await fetch(`https://leetcode-api-osgb.onrender.com/select?titleSlug=${name}`);
+                            new_prob = await new_prob.json();
+
+                            const { topicTags } = new_prob;
+                            difficulty = new_prob.difficulty;
+
+                            tags = topicTags.map((topic) => topic.name)
+                        }
+
+                        const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.timestamp * 1000);
+                        if (stale) break;
+                    }
+                } else {
+                    console.log(`❌ API fetch failed : /lc/subs/${lc.handle}`)
+                }
+
+            } catch (error) {
+                console.log("❌ Update subs failed : lc");
+            }
         }
         else {
             console.log(`❌ No lc handle found`)
@@ -117,39 +121,44 @@ const syncSubs = async (userId, profileId) => {
 
         //codeforces -> 1 API call
         if (cf.handle) {
-            //get submissions and build heatmap and build category array
+            try {
+                //get submissions and build heatmap and build category array
 
-            let subs = await fetch(`https://codeforces.com/api/user.status?handle=${cf.handle}`);
-            subs = await subs.json();
+                let subs = await fetch(`https://codeforces.com/api/user.status?handle=${cf.handle}`);
+                subs = await subs.json();
 
-            if (subs?.status === "OK") {
-                subs = subs.result;
-                console.log(`✅ API fetch success : /cf/subs/${cf.handle}, submissions count : ${subs.length} `)
+                if (subs?.status === "OK") {
+                    subs = subs.result;
+                    console.log(`✅ API fetch success : /cf/subs/${cf.handle}, submissions count : ${subs.length} `)
 
-                subs.reverse();//since heatmap has limit-cap (so sending the recent ones last (older ones fall out)) 
+                    subs.reverse();//since heatmap has limit-cap (so sending the recent ones last (older ones fall out)) 
 
-                const knownProblems = await Problem.find({ platform: "codeforces" });
-                const problemMap = new Map();
-                for (const p of knownProblems) {
-                    problemMap.set(p.url, p); // name = titleSlug
+                    const knownProblems = await Problem.find({ platform: "codeforces" });
+                    const problemMap = new Map();
+                    for (const p of knownProblems) {
+                        problemMap.set(p.url, p); // name = titleSlug
+                    }
+
+                    for (const sub of subs) {
+                        const url = `https://codeforces.com/problemset/problem/${sub.problem.contestId}/${sub.problem.index}`
+                        const { name, tags } = sub.problem;
+                        const platform = "codeforces";
+                        const difficulty = sub.problem.rating;
+                        const status = sub.verdict === "OK" ? "AC" : sub.verdict;
+
+                        let prb = problemMap.get(url);
+
+
+                        const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.creationTimeSeconds * 1000);
+                        if (stale) break;
+                    }
+                }
+                else {
+                    console.log(`❌ API fetch failed : /cf/subs/${cf.handle}`)
                 }
 
-                for (const sub of subs) {
-                    const url = `https://codeforces.com/problemset/problem/${sub.problem.contestId}/${sub.problem.index}`
-                    const { name, tags } = sub.problem;
-                    const platform = "codeforces";
-                    const difficulty = sub.problem.rating;
-                    const status = sub.verdict === "OK" ? "AC" : sub.verdict;
-
-                    let prb = problemMap.get(url);
-
-
-                    const stale = await updateStatus(prb, { url, name, platform, difficulty, tags }, status, coder, profile, lastUpdated, sub.creationTimeSeconds * 1000);
-                    if (stale) break;
-                }
-            }
-            else {
-                console.log(`❌ API fetch failed : /cf/subs/${cf.handle}`)
+            } catch (error) {
+                console.log("❌ Update subs failed : cf");
             }
         }
         else {
@@ -175,80 +184,91 @@ const syncRatings = async (userId, profileId) => {
         const lc = profile.leetcode;
 
         if (cf.handle) {
-            let ratings = await fetch(`https://codeforces.com/api/user.rating?handle=${cf.handle}`);
-            ratings = await ratings.json();
+            try {
+                let ratings = await fetch(`https://codeforces.com/api/user.rating?handle=${cf.handle}`);
+                ratings = await ratings.json();
 
-            if (ratings?.status === "OK") {
-                ratings = ratings.result;
+                if (ratings?.status === "OK") {
+                    ratings = ratings.result;
 
-                console.log(`✅ API fetch success : /cf/rating/${cf.handle}, contests count : ${ratings.length} `)
+                    console.log(`✅ API fetch success : /cf/rating/${cf.handle}, contests count : ${ratings.length} `)
 
-                for (const delta of ratings) {
-                    const name = delta.contestName;
-                    const rating = Math.round(delta.newRating);
-                    const { rank } = delta;
-                    const date = new Date(delta.ratingUpdateTimeSeconds * 1000);
-                    const url = `https://codeforces.com/contest/${delta.contestId}`
+                    for (const delta of ratings) {
+                        const name = delta.contestName;
+                        const rating = Math.round(delta.newRating);
+                        const { rank } = delta;
+                        const date = new Date(delta.ratingUpdateTimeSeconds * 1000);
+                        const url = `https://codeforces.com/contest/${delta.contestId}`
 
-                    await updateRating({ name, rating, rank, date, url }, 'codeforces', profile);
+                        await updateRating({ name, rating, rank, date, url }, 'codeforces', profile);
+                    }
                 }
+                else {
+                    console.log(`❌ API fetch failed : /cf/ratings/${cf.handle}`)
+                }
+            } catch (error) {
+                console.log("❌ Update rating failed : cf");
             }
-            else {
-                console.log(`❌ API fetch failed : /cf/ratings/${cf.handle}`)
-            }
-
         }
         else {
             console.log(`❌ No cf handle found`)
         }
 
         if (lc.handle) {
-            let ratings = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/contest`);
-            ratings = await ratings.json();
+            try {
+                let ratings = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/contest`);
+                ratings = await ratings.json();
 
-            if (ratings?.contestParticipation) {
-                ratings = ratings.contestParticipation;
+                if (ratings?.contestParticipation) {
+                    ratings = ratings.contestParticipation;
 
-                console.log(`✅ API fetch success : /lc/ratings/${lc.handle}, contests count : ${ratings.length} `)
+                    console.log(`✅ API fetch success : /lc/ratings/${lc.handle}, contests count : ${ratings.length} `)
 
-                for (const delta of ratings) {
-                    const name = delta.contest.title;
-                    const rating = Math.round(delta.rating);
-                    const rank = delta.ranking;
-                    const date = new Date(delta.contest.startTime * 1000);
-                    const url = `https://leetcode.com/contest/${delta.contest.title.toLowerCase().replaceAll(' ', '-')}/`;
+                    for (const delta of ratings) {
+                        const name = delta.contest.title;
+                        const rating = Math.round(delta.rating);
+                        const rank = delta.ranking;
+                        const date = new Date(delta.contest.startTime * 1000);
+                        const url = `https://leetcode.com/contest/${delta.contest.title.toLowerCase().replaceAll(' ', '-')}/`;
 
-                    await updateRating({ name, rating, rank, date, url }, 'leetcode', profile);
+                        await updateRating({ name, rating, rank, date, url }, 'leetcode', profile);
 
+                    }
+                } else {
+                    console.log(`❌ API fetch failed : /lc/ratings/${lc.handle}`)
                 }
-            } else {
-                console.log(`❌ API fetch failed : /lc/ratings/${lc.handle}`)
+            } catch (error) {
+                console.log("❌ Update rating failed : lc");
             }
         }
         else {
             console.log(`❌ No lc handle found`)
         }
         if (cc.handle) {
-            let ratings = await fetch(`https://codechef-api.vercel.app/handle/${cc.handle}`);
-            ratings = await ratings.json();
+            try {
+                let ratings = await fetch(`https://codechef-api.vercel.app/handle/${cc.handle}`);
+                ratings = await ratings.json();
 
-            if (ratings?.ratingData) {
-                ratings = ratings.ratingData;
+                if (ratings?.ratingData) {
+                    ratings = ratings.ratingData;
 
-                console.log(`✅ API fetch success : /cc/ratings/${cc.handle}, contests count : ${ratings.length} `)
+                    console.log(`✅ API fetch success : /cc/ratings/${cc.handle}, contests count : ${ratings.length} `)
 
-                for (const delta of ratings) {
-                    const name = delta.name;
-                    const rating = Math.round(delta.rating);
-                    const { rank } = delta;
-                    const date = new Date(delta.end_date);
-                    const url = `https://www.codechef.com/${delta.code}`;
+                    for (const delta of ratings) {
+                        const name = delta.name;
+                        const rating = Math.round(delta.rating);
+                        const { rank } = delta;
+                        const date = new Date(delta.end_date);
+                        const url = `https://www.codechef.com/${delta.code}`;
 
-                    await updateRating({ name, rating, rank, date, url }, 'codechef', profile);
+                        await updateRating({ name, rating, rank, date, url }, 'codechef', profile);
 
+                    }
+                } else {
+                    console.log(`❌ API fetch failed : /cc/ratings/${cc.handle}`)
                 }
-            } else {
-                console.log(`❌ API fetch failed : /cc/ratings/${cc.handle}`)
+            } catch (error) {
+                console.log("❌ Update rating failed : cc");
             }
         }
         else {
@@ -270,26 +290,31 @@ const syncHeatmaps = async (userId, profileId) => {
         const lc = profile.leetcode;
 
         if (cc.handle) {
-            let raw_data = await fetch(`https://codechef-api.vercel.app/handle/${cc.handle}`);
-            raw_data = await raw_data.json();
+            try {
+                let raw_data = await fetch(`https://codechef-api.vercel.app/handle/${cc.handle}`);
+                raw_data = await raw_data.json();
 
-            if (raw_data?.heatMap) {
-                raw_data = raw_data.heatMap;
+                if (raw_data?.heatMap) {
+                    raw_data = raw_data.heatMap;
 
-                console.log(`✅ API fetch success : /cc/heatmap/${cc.handle}, days count : ${raw_data.length} `)
+                    console.log(`✅ API fetch success : /cc/heatmap/${cc.handle}, days count : ${raw_data.length} `)
 
-                const formatted = raw_data.map(x => {
-                    return { date: x.date, subs: x.value }
-                })
+                    const formatted = raw_data.map(x => {
+                        return { date: x.date, subs: x.value }
+                    })
 
-                profile.codechef.heatmap = formatted;
+                    profile.codechef.heatmap = formatted;
 
-                profile.markModified('codechef.heatmap');
+                    profile.markModified('codechef.heatmap');
 
-                await profile.save();
-            }
-            else {
-                console.log(`❌ API fetch failed : /cc/heatmap/${cc.handle}`)
+                    await profile.save();
+                }
+
+                else {
+                    console.log(`❌ API fetch failed : /cc/heatmap/${cc.handle}`)
+                }
+            } catch (error) {
+                console.log("❌ Update heatmap failed : cc");
             }
         }
         else {
@@ -297,38 +322,42 @@ const syncHeatmaps = async (userId, profileId) => {
         }
 
         if (lc.handle) {
-            let raw_data = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/calendar`);
-            raw_data = await raw_data.json();
+            try {
+                let raw_data = await fetch(`https://leetcode-api-osgb.onrender.com/${lc.handle}/calendar`);
+                raw_data = await raw_data.json();
 
-            if (raw_data?.submissionCalendar) {
-                raw_data = raw_data.submissionCalendar;
+                if (raw_data?.submissionCalendar) {
+                    raw_data = raw_data.submissionCalendar;
 
-                let hm_data = JSON.parse(raw_data);
+                    let hm_data = JSON.parse(raw_data);
 
-                // Converting to array of { date, subs }
-                const formatted = Object.entries(hm_data).map(([timestampStr, subs]) => {
-                    const timestamp = Number(timestampStr) * 1000; // Convert to milliseconds
-                    const cell = new Date(timestamp);
+                    // Converting to array of { date, subs }
+                    const formatted = Object.entries(hm_data).map(([timestampStr, subs]) => {
+                        const timestamp = Number(timestampStr) * 1000; // Convert to milliseconds
+                        const cell = new Date(timestamp);
 
-                    const year = cell.getUTCFullYear();
-                    const month = String(cell.getUTCMonth() + 1);
-                    const day = String(cell.getUTCDate());
-                    const date = `${year}-${month}-${day}`;
+                        const year = cell.getUTCFullYear();
+                        const month = String(cell.getUTCMonth() + 1);
+                        const day = String(cell.getUTCDate());
+                        const date = `${year}-${month}-${day}`;
 
-                    return { date, subs };
-                });
+                        return { date, subs };
+                    });
 
-                console.log(`✅ API fetch success : /lc/heatmap/${lc.handle}, days count : ${formatted.length} `)
+                    console.log(`✅ API fetch success : /lc/heatmap/${lc.handle}, days count : ${formatted.length} `)
 
 
-                profile.leetcode.heatmap = formatted;
+                    profile.leetcode.heatmap = formatted;
 
-                profile.markModified('leetcode.heatmap');
+                    profile.markModified('leetcode.heatmap');
 
-                await profile.save();
+                    await profile.save();
 
-            } else {
-                console.log(`❌ API fetch failed : /lc/heatmap/${lc.handle}`)
+                } else {
+                    console.log(`❌ API fetch failed : /lc/heatmap/${lc.handle}`)
+                }
+            } catch (error) {
+                console.log("❌ Update heatmap failed : lc");
             }
         }
         else {

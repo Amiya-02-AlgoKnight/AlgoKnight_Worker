@@ -5,9 +5,9 @@ on:
     - cron: "0 * * * *"  # Runs every 1 hour (UTC)
   workflow_dispatch:        # Optional: allows manual trigger from GitHub UI
   
-concurrency:
-  group: "run-worker"
-  cancel-in-progress: true
+# concurrency:
+#   group: "run-worker"
+#   cancel-in-progress: true
 
 jobs:
   run-worker:
